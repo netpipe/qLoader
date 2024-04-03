@@ -9,7 +9,11 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QSystemTrayIcon>
+#include <QCloseEvent>
+#include <qmenu.h>
 #include <QDebug>
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -56,6 +60,8 @@ public:
         loadApplications();
 
         connect(applicationsList, &QListWidget::itemClicked, this, &MainWindow::loadSelectedApplication);
+
+        createTrayIcon();
     }
 
     ~MainWindow() {
@@ -129,6 +135,13 @@ private slots:
         }
     }
 
+    void closeEvent(QCloseEvent *event) override {
+        if (trayIcon->isVisible()) {
+            hide();
+            event->ignore();
+        }
+    }
+
 private:
     void initializeDatabase() {
         m_database = QSqlDatabase::addDatabase("QSQLITE");
@@ -151,6 +164,20 @@ private:
         }
     }
 
+    void createTrayIcon() {
+        trayIconMenu = new QMenu(this);
+        QAction *showWindowAction = new QAction("Show Window", this);
+        connect(showWindowAction, &QAction::triggered, this, &MainWindow::show);
+        trayIconMenu->addAction(showWindowAction);
+        trayIconMenu->addSeparator();
+        trayIconMenu->addAction("Exit", this, &QApplication::quit);
+
+        trayIcon = new QSystemTrayIcon(this);
+        trayIcon->setContextMenu(trayIconMenu);
+        trayIcon->setIcon(QIcon(":/mremind-icon.png"));
+        trayIcon->show();
+    }
+
     QWidget *centralWidget;
     QLabel *nameLabel;
     QLineEdit *nameEdit;
@@ -161,6 +188,9 @@ private:
     QPushButton *updateButton;
     QListWidget *applicationsList;
     QSqlDatabase m_database;
+
+    QSystemTrayIcon *trayIcon;
+    QMenu *trayIconMenu;
 };
 
 int main(int argc, char *argv[]) {
